@@ -1,0 +1,3 @@
+<launch>
+  <node name="post_processor_node" type="post_processing.py" pkg="object_detection" output="screen" />
+</launch>

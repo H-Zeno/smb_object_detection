@@ -248,7 +248,6 @@ class Node:
                 self.detection_info_pub.publish(object_information_array)
                 self.object_point_clouds_pub.publish(point_cloud_array)
                 self.object_detection_img_pub.publish(self.imagereader.cv2_to_imgmsg(object_detection_image, 'bgr8'))
-                
 
         self.synchronizer.registerCallback(callback)
 
