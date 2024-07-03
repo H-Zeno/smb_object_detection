@@ -12,22 +12,25 @@ class our_node:
     def __init__(self):
         rospy.init_node('post_processor_node')
         self.detected_objects = []
+        self.detected_obj_file_path = '/detected_objects.csv'
+
         self.confidence_threshold = 0.6
         self.num_detections_threshold = 2
         self.object_radius = 1
         self.tf_buffer = tf.Buffer()
         tf_listener = tf.TransformListener(self.tf_buffer)
         post_processor = rospy.Subscriber("/object_detector/detection_info", ObjectDetectionInfoArray ,self.callback, queue_size=2)
+        # rospy.Subscriber("/andrew_state", ObjectDetectionInfoArray ,self.callback, queue_size=2)
         rospy.spin()
 
     def callback(self, data):
 
         for info in data.info:
-            
-            rospy.loginfo("Detected object: %s", info.class_id)
-            rospy.loginfo("Position: [%f, %f, %f]", 
-            info.position.x, info.position.y, info.position.z)
-            rospy.loginfo("Uncertainty: %f", info.confidence)
+            print(' ///// C')
+            # rospy.loginfo("Detected object: %s", info.class_id)
+            # rospy.loginfo("Position: [%f, %f, %f]", 
+            # info.position.x, info.position.y, info.position.z)
+            # rospy.loginfo("Uncertainty: %f", info.confidence)
             object_point = PointStamped()
             object_point.header.frame_id = 'rgb_camera_optical_link'
             object_point.header.stamp = data.header.stamp
@@ -40,12 +43,15 @@ class our_node:
                 rospy.loginfo("Converted point: [%f, %f, %f]", 
                               converted_point.point.x, converted_point.point.y, converted_point.point.z)
                 self.detected_objects.append((info.class_id, [info.position.x, info.position.y, info.position.z], info.confidence))
-                self.confident_detected_objects = self.filter_real_detections(self, self.detected_objects, self.confidence_threshold, self.num_detections_threshold, self.object_radius)
-            
+
             else:
                 rospy.logerr("Failed to convert point for object: %s", info.class_id)
 
-            
+            if len(self.detected_objects) > 50:
+                print(' ///// Confident objects are printed!! ///')
+                self.confident_objects = self.filter_real_detections(self.detected_objects, self.confidence_threshold, self.num_detections_threshold, self.object_radius)
+                print(self.confident_objects)
+
 
     def object_detections_to_world_frame(self, point1:Point):
         """ Function that transforms the detected object location from the camera frame to the world frame.
@@ -108,7 +114,7 @@ class our_node:
                 # update base object location
                 base_object_location = confident_detected_objects[i][1]
 
-        return confident_detected_objects[real_detection_indices]
+        return [confident_detected_objects[idx] for idx in real_detection_indices]
 
 
 # def publish_low_confidence_detections(detected_objects:list, confidence_threshold:float):
@@ -120,3 +126,4 @@ class our_node:
 
 if __name__=='__main__':
     node = our_node()
+    
