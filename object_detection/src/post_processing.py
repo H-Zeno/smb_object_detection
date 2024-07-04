@@ -18,13 +18,12 @@ class our_node:
 
         # Create a timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+        # backpack, umbrella, bottle, sign, clock
+        self.rads = [1,1,1,1,1]
         # File path with timestamp
         self.file_path_detected_objects = '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
         
         #f'~/detected_objects_{timestamp}.csv'
-
-        # 
 
         self.confidence_threshold = 0.65
         self.num_detections_threshold = 1
@@ -59,39 +58,8 @@ class our_node:
             else:
                 rospy.logerr("Failed to convert point for object: %s", info.class_id)
 
-            if len(self.detected_objects) == 150:
-                print(' ///// Confident objects are printed!! ///')
-                self.confident_objects = self.filter_real_detections(self.detected_objects, self.confidence_threshold, self.num_detections_threshold, self.object_radius)
-                print(self.confident_objects)
 
-                # Write the confidently detected objects to a CSV file
-                file_path = self.file_path_detected_objects
-                with open(file_path, mode='w', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(['Object Class', 'Position (x,y,z)'])
-                    for obj in self.confident_objects:
-                        writer.writerow([obj[0], f'({obj[1][0]},{obj[1][1]},{obj[1][2]})'])
-
-                print(f'Detected objects have been written to {file_path}')
-
-
-
-    def object_detections_to_world_frame(self, point1:Point):
-        """ Function that transforms the detected object location from the camera frame to the world frame.
-        
-        Args:
-            point1 (Point): Detected object location in the camera frame.
-        """
-        try:
-            trans = self.tf_buffer.lookup_transform('map_o3d', 'rgb_camera_optical_link', rospy.Time()) 
-            point2 = tf2_geometry_msgs.do_transform_point(point1, trans)
-
-        except Exception as e:
-            point2 = None
-        return point2
-
-
-    def filter_real_detections(self, detected_objects:list, confidence_threshold:float, num_detections_threshold:int, object_radius:float):
+    def filter_real_detections(self, data):
         """ Function that filters out real object detections and outputs thea averge location of the detected objec
         
         Args:
@@ -103,12 +71,22 @@ class our_node:
         Returns:
             list: List of tuples containing the real detected object name and its average location (x, y, z).
         """
+        print(data)
+        if not data.data:
+            return
 
+        detected_objects = self.detected_objects
+        confidence_threshold = self.confidence_threshold
+        num_detections_threshold = self.num_detections_threshold
+        object_radius = self.object_radius
+        
         # Filter out low confidence detections
         confident_detected_objects = [obj for obj in detected_objects if obj[2] > confidence_threshold]
-        print('Confident detected objects:', confident_detected_objects)
         if not confident_detected_objects:
-            return []
+            return
+
+        print('Confident detected objects:', confident_detected_objects)
+        
 
         # print('Objects with a high confidence score:', confident_detected_objects
         same_detections = 0
@@ -157,8 +135,36 @@ class our_node:
                 i += 1
 
         print('Real detected objects:', real_detections)
-        return real_detections
+
+        # Write the confidently detected objects to a CSV file
+        file_path = self.file_path_detected_objects
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Object Class', 'Position (x,y,z)'])
+            for obj in real_detections:
+                writer.writerow([obj[0], f'({obj[1][0]},{obj[1][1]},{obj[1][2]})'])
+
+        print(f'Detected objects have been written to {file_path}')
+
+
+
+    def object_detections_to_world_frame(self, point1:Point):
+        """ Function that transforms the detected object location from the camera frame to the world frame.
         
+        Args:
+            point1 (Point): Detected object location in the camera frame.
+        """
+        try:
+            trans = self.tf_buffer.lookup_transform('map_o3d', 'rgb_camera_optical_link', rospy.Time()) 
+            point2 = tf2_geometry_msgs.do_transform_point(point1, trans)
+
+        except Exception as e:
+            point2 = None
+        return point2
+
+
+
+
 
 # def publish_low_confidence_detections(detected_objects:list, confidence_threshold:float):
             
