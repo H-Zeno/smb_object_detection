@@ -23,10 +23,12 @@ class our_node:
         self.classes = ["backpack", "person", "bottle", "laptop"]
 
         # File path with timestamp
-        self.file_path_all_confident_detected_objects = f'~/all_confident_detected_objects_{timestamp}.csv'
-        # f'/workspaces/rss_workspace/src/object_detection/object_detection/src/all_confident_detected_objects_{timestamp}.csv'
-        self.file_path_detected_objects = f'~/detected_objects_{timestamp}.csv'
-        #'/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
+        self.file_path_all_confident_detected_objects = f'/workspaces/rss_workspace/src/object_detection/object_detection/src/all_confident_detected_objects_{timestamp}.csv'
+        # f'~/all_confident_detected_objects_{timestamp}.csv'
+        # 
+        self.file_path_detected_objects = '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
+        # f'~/detected_objects_{timestamp}.csv'
+        #
 
         self.confidence_threshold = 0.65
         self.num_detections_threshold = 1
@@ -132,7 +134,7 @@ class our_node:
                     print('Cluster center:', cluster_center)
                     # remove the duplicate entry of the same object from the cluster
 
-                    if (object_position, 1) in clusters[curr_name]:
+                    if object_position in clusters[curr_name]:
                         clusters[curr_name].remove((object_position, 1))
                         print("Successfully removed the duplicate entry from the list.")
                     else:
