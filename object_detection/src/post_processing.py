@@ -20,9 +20,11 @@ class our_node:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # File path with timestamp
-        self.file_path_detected_objects = f'~/detected_objects_{timestamp}.csv'
+        self.file_path_detected_objects = '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
+        
+        #f'~/detected_objects_{timestamp}.csv'
 
-        # '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
+        # 
 
         self.confidence_threshold = 0.65
         self.num_detections_threshold = 1
