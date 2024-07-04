@@ -22,15 +22,15 @@ class our_node:
         # self.classes = ["backpack", "umbrella", "bottle", "stop sign", "clock"]
         self.classes = ["backpack", "person", "bottle", "laptop"]
 
-        self.rads = [2,2,2,2]
         # File path with timestamp
-        self.file_path_detected_objects = '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
-        
-        #f'~/detected_objects_{timestamp}.csv'
+        self.file_path_all_confident_detected_objects = f'~/all_confident_detected_objects_{timestamp}.csv'
+        # f'/workspaces/rss_workspace/src/object_detection/object_detection/src/all_confident_detected_objects_{timestamp}.csv'
+        self.file_path_detected_objects = f'~/detected_objects_{timestamp}.csv'
+        #'/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
 
         self.confidence_threshold = 0.65
         self.num_detections_threshold = 1
-        self.object_radius = 1
+        self.object_radius = 2
         self.tf_buffer = tf.Buffer()
         tf_listener = tf.TransformListener(self.tf_buffer)
         post_processor = rospy.Subscriber("/object_detector/detection_info", ObjectDetectionInfoArray,self.callback, queue_size=2)
@@ -89,29 +89,59 @@ class our_node:
             return
 
         print('Confident detected objects:', confident_detected_objects)
-        
+
+        # Write the confidently detected objects to a CSV file
+        file_path = self.file_path_all_confident_detected_objects 
+        with open(file_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Object Class', 'Position (x,y,z)'])
+            for confident_detection in confident_detected_objects: 
+                writer.writerow([confident_detection[0], f'({confident_detection[1]},{confident_detection[2]})'])
+
+        print('Successfuly saved initial confident detections to:', file_path)
 
         # print('Objects with a high confidence score:', confident_detected_objects
         clusters = {name: [] for name in self.classes}
         print(f'{clusters=}')
         print(confident_detected_objects)
+
+        # go through all confident detections
         for i in range(len(confident_detected_objects)):
             print(i)
             curr_name = confident_detected_objects[i][0]
             curr_pos = np.array(confident_detected_objects[i][1])
-            if clusters[curr_name] == []:
-                clusters[curr_name].append((curr_pos, 1))
-                continue
-            for cluster_center, count in clusters[curr_name]:
-                if np.linalg.norm(cluster_center - curr_pos) < self.rads[self.classes.index(curr_name)]:
-                    
-                    clusters[curr_name].remove((cluster_center, count))
-                    clusters[curr_name].append(((count/(count+1))*cluster_center + (1/(count+1))*curr_pos, count+1))
-                    break
+
+            # Append a tuple of object position and a count of one to the dictionary
+            clusters[curr_name].append((curr_pos, 1))
+                
+
+        # loop through all the dictionary keys (object types detected)
+        for curr_name in clusters.keys():
+        
+            # loop through all high confidence detections and locations
+            for i, centroid in enumerate(clusters[curr_name]):
+                object_position, one_count = centroid
+
+                if i == 0:
+                    cluster_center = object_position
+
+                # the object close to an object we already detectted
+                if np.linalg.norm(cluster_center - object_position) < self.object_radius:
+                    print('Object detected in the same cluster as:', curr_name)
+                    print('Object position:', object_position)
+                    print('Cluster center:', cluster_center)
+                    # remove the duplicate entry of the same object from the cluster
+                    clusters[curr_name].remove((object_position, one_count))
+                    # # append the newly updated cluster center
+                    # clusters[curr_name].append(((i/(i+1))*cluster_center + (1/(i+1))*object_pose, one_count))
+
+                    print('Updated dictionary:', clusters[curr_name])
+
+                # the object is far away from an object that we already detected
                 else: 
-                    # new
-                    clusters[curr_name].append((curr_pos, 1))
-                    break
+                    clusters[curr_name].append((object_position, 1))
+                    print('Updated dictionary:', clusters[curr_name])
+
 
         print(clusters)
         # Write the confidently detected objects to a CSV file
