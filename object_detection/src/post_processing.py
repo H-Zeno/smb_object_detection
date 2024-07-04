@@ -19,7 +19,10 @@ class our_node:
         # Create a timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         # backpack, umbrella, bottle, sign, clock
-        self.rads = [1,1,1,1,1]
+        # self.classes = ["backpack", "umbrella", "bottle", "stop sign", "clock"]
+        self.classes = ["backpack", "person", "bottle", "laptop"]
+
+        self.rads = [2,2,2,2]
         # File path with timestamp
         self.file_path_detected_objects = '/workspaces/rss_workspace/src/object_detection/object_detection/src/detected_objects.csv'
         
@@ -89,60 +92,36 @@ class our_node:
         
 
         # print('Objects with a high confidence score:', confident_detected_objects
-        same_detections = 0
-        real_detection_indices = []
-        real_detections = []
-
-        i = 0
-        
-        # set base object location (first detection)
-        base_object_location = confident_detected_objects[i][1]
-
-        # Identify the real detections and add their indices to a list
-        # Calculate the sequence length (# of sequential detections of the same object around the same location)
-        for j in range(len(confident_detected_objects)):
-
-            # Calculate the distance between the base object (detected first) and the current object
-            base_object_distance = np.linalg.norm(np.array(base_object_location) - np.array(confident_detected_objects[j][1]))
-            
-            print('i =', i)
-            print('j =', j)
-            print('Confident detected objects (i):', confident_detected_objects[i][0])
-            print('Confident detected objects (j):', confident_detected_objects[j][0])
-
-            if confident_detected_objects[i][0] == confident_detected_objects[j][0] and base_object_distance < object_radius:
-                print('Same Object was detected!:', confident_detected_objects[i][0])
-                same_detections += 1
-
-            else:
-                if same_detections >= num_detections_threshold:
+        clusters = {name: [] for name in self.classes}
+        print(f'{clusters=}')
+        print(confident_detected_objects)
+        for i in range(len(confident_detected_objects)):
+            print(i)
+            curr_name = confident_detected_objects[i][0]
+            curr_pos = np.array(confident_detected_objects[i][1])
+            if clusters[curr_name] == []:
+                clusters[curr_name].append((curr_pos, 1))
+                continue
+            for cluster_center, count in clusters[curr_name]:
+                if np.linalg.norm(cluster_center - curr_pos) < self.rads[self.classes.index(curr_name)]:
                     
-                    # real_detection_indices.extend(range(i, j))
-                    # print('Real detected indices:', real_detection_indices)
+                    clusters[curr_name].remove((cluster_center, count))
+                    clusters[curr_name].append(((count/(count+1))*cluster_center + (1/(count+1))*curr_pos, count+1))
+                    break
+                else: 
+                    # new
+                    clusters[curr_name].append((curr_pos, 1))
+                    break
 
-                    # calculate the average location of the detected object
-                    estimated_location = np.mean([confident_detected_objects[idx][1] for idx in range(i, j)], axis=0)
-                    real_detections.append((confident_detected_objects[i][0], estimated_location))
-
-                # update variables
-                i = j
-                same_detections = 0
-                
-                # update base object location
-                base_object_location = confident_detected_objects[i][1]
-
-                # update i
-                i += 1
-
-        print('Real detected objects:', real_detections)
-
+        print(clusters)
         # Write the confidently detected objects to a CSV file
         file_path = self.file_path_detected_objects
         with open(file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Object Class', 'Position (x,y,z)'])
-            for obj in real_detections:
-                writer.writerow([obj[0], f'({obj[1][0]},{obj[1][1]},{obj[1][2]})'])
+            for name, centroids in clusters.items(): 
+                for centroid, count in centroids:
+                    writer.writerow([name, f'({centroid[0]},{centroid[1]},{centroid[2]})'])
 
         print(f'Detected objects have been written to {file_path}')
 
