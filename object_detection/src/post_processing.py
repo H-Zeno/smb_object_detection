@@ -120,7 +120,7 @@ class our_node:
         
             # loop through all high confidence detections and locations
             for i, centroid in enumerate(clusters[curr_name]):
-                object_position, one_count = centroid
+                object_position, _ = centroid
 
                 if i == 0:
                     cluster_center = object_position
@@ -131,7 +131,12 @@ class our_node:
                     print('Object position:', object_position)
                     print('Cluster center:', cluster_center)
                     # remove the duplicate entry of the same object from the cluster
-                    clusters[curr_name].remove((object_position, one_count))
+
+                    if (object_position, 1) in clusters[curr_name]:
+                        clusters[curr_name].remove((object_position, 1))
+                        print("Successfully removed the duplicate entry from the list.")
+                    else:
+                        print(f"The tuple {(object_position, 1)} does not exist in the list for {curr_name}.")
                     # # append the newly updated cluster center
                     # clusters[curr_name].append(((i/(i+1))*cluster_center + (1/(i+1))*object_pose, one_count))
 
@@ -154,7 +159,6 @@ class our_node:
                     writer.writerow([name, f'({centroid[0]},{centroid[1]},{centroid[2]})'])
 
         print(f'Detected objects have been written to {file_path}')
-
 
 
     def object_detections_to_world_frame(self, point1:Point):
